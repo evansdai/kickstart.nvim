@@ -944,7 +944,371 @@ require('lazy').setup({
       --  Check out: https://github.com/echasnovski/mini.nvim
     end,
   },
-  'nvim-treesitter/nvim-treesitter',
+  {
+    'nvim-treesitter/nvim-treesitter',
+    build = ':TSUpdate',
+    event = { 'BufReadPost', 'BufNewFile' },
+    cmd = { 'TSInstall', 'TSUpdate', 'TSInstallInfo' },
+    config = function()
+      require('nvim-treesitter').setup({
+        ensure_installed = { 'yaml', 'lua', 'vim', 'vimdoc', 'markdown', 'markdown_inline' },
+        auto_install = true,
+      })
+    end,
+  },
+  {
+    'olimorris/codecompanion.nvim',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-treesitter/nvim-treesitter',
+      'nvim-telescope/telescope.nvim',
+      'stevearc/dressing.nvim', -- Optional: for better UI
+    },
+    config = function()
+      require('codecompanion').setup {
+        -- Strategies define how different interaction types work
+        strategies = {
+          -- Chat interaction in a buffer
+          chat = {
+            adapter = 'openrouter',
+            roles = {
+              llm = '  CodeCompanion',
+              user = '  You',
+            },
+            keymaps = {
+              close = { modes = { n = 'q', i = '<C-c>' } },
+              stop = { modes = { n = '<C-c>' } },
+              submit = { modes = { n = '<CR>', i = '<C-CR>' } },
+              accept_diff = { modes = { n = 'ga' } },
+              reject_diff = { modes = { n = 'gr' } },
+              toggle_diff = { modes = { n = 'gd' } },
+            },
+          },
+          -- Inline interaction for code suggestions
+          inline = {
+            adapter = 'openrouter',
+            keymaps = {
+              accept_change = { modes = { n = 'ga' } },
+              reject_change = { modes = { n = 'gr' } },
+            },
+          },
+          -- Agent/command interaction
+          agent = {
+            adapter = 'openrouter',
+          },
+          -- Command interaction (cmd)
+          cmd = {
+            adapter = 'openrouter',
+          },
+        },
+
+        -- Adapters configuration
+        adapters = {
+          openrouter = function()
+            return require('codecompanion.adapters').extend('openai', {
+              name = 'openrouter',
+              url = 'https://openrouter.ai/api/v1/chat/completions',
+              env = {
+                api_key = 'OPENROUTER_API_KEY',
+              },
+              headers = {
+                ['HTTP-Referer'] = 'https://neovim.io', -- Optional but recommended by OpenRouter
+                ['X-Title'] = 'Neovim CodeCompanion', -- Optional: helps OpenRouter track usage
+              },
+              schema = {
+                model = {
+                  default = 'anthropic/claude-3.5-sonnet', -- Default model
+                  choices = {
+                    'anthropic/claude-3.5-sonnet',
+                    'anthropic/claude-3-opus',
+                    'openai/gpt-4-turbo',
+                    'openai/gpt-4',
+                    'openai/gpt-3.5-turbo',
+                    'google/gemini-pro',
+                    'google/gemini-pro-1.5',
+                    'meta-llama/llama-3-70b-instruct',
+                    'meta-llama/codellama-70b-instruct',
+                    'deepseek/deepseek-coder',
+                    'deepseek/deepseek-chat',
+                  },
+                },
+                temperature = {
+                  default = 0.7,
+                },
+                max_tokens = {
+                  default = 4096,
+                },
+              },
+            })
+          end,
+        },
+
+        -- Display options
+        display = {
+          action_palette = {
+            provider = 'telescope', -- or "mini_pick"
+            width = 95,
+            height = 10,
+          },
+          chat = {
+            window = {
+              layout = 'vertical', -- vertical|horizontal|float
+              width = 0.45,
+              height = 0.85,
+              relative = 'editor',
+              border = 'rounded',
+            },
+            intro_message = 'Welcome to CodeCompanion! Type your question or select text and ask about it.',
+            show_settings = true,
+            show_token_count = true,
+            show_model = true,
+          },
+          inline = {
+            diff = {
+              enabled = true,
+              priority = 130,
+              hl_groups = {
+                added = 'DiffAdd',
+                removed = 'DiffDelete',
+                changed = 'DiffChange',
+              },
+            },
+          },
+          diff = {
+            provider = 'mini_diff', -- default|mini_diff
+          },
+        },
+
+        -- Prompt library with more options
+        prompt_library = {
+          ['Code'] = {
+            {
+              role = 'user',
+              content = function()
+                return 'Please explain this code in detail'
+              end,
+              opts = {
+                index = 1,
+                is_default = true,
+                is_slash_cmd = false,
+                short_name = 'explain',
+                description = 'Explain the selected code',
+              },
+            },
+            {
+              role = 'user',
+              content = function()
+                return 'Please refactor this code to be more efficient and maintainable'
+              end,
+              opts = {
+                index = 2,
+                is_default = false,
+                is_slash_cmd = false,
+                short_name = 'refactor',
+                description = 'Refactor the selected code',
+              },
+            },
+            {
+              role = 'user',
+              content = function()
+                return 'Please write comprehensive tests for this code'
+              end,
+              opts = {
+                index = 3,
+                is_default = false,
+                is_slash_cmd = false,
+                short_name = 'tests',
+                description = 'Generate tests for the selected code',
+              },
+            },
+            {
+              role = 'user',
+              content = function()
+                return 'Please add comprehensive documentation and comments to this code'
+              end,
+              opts = {
+                index = 4,
+                is_default = false,
+                is_slash_cmd = false,
+                short_name = 'document',
+                description = 'Add documentation to the selected code',
+              },
+            },
+            {
+              role = 'user',
+              content = function()
+                return 'Please find and fix any bugs in this code'
+              end,
+              opts = {
+                index = 5,
+                is_default = false,
+                is_slash_cmd = false,
+                short_name = 'fix',
+                description = 'Fix bugs in the selected code',
+              },
+            },
+            {
+              role = 'user',
+              content = function()
+                return 'Please optimize this code for better performance'
+              end,
+              opts = {
+                index = 6,
+                is_default = false,
+                is_slash_cmd = false,
+                short_name = 'optimize',
+                description = 'Optimize the selected code',
+              },
+            },
+          },
+          ['Text'] = {
+            {
+              role = 'user',
+              content = function()
+                return 'Please improve the grammar and clarity of this text'
+              end,
+              opts = {
+                index = 7,
+                is_default = false,
+                is_slash_cmd = false,
+                short_name = 'grammar',
+                description = 'Improve grammar and clarity',
+              },
+            },
+            {
+              role = 'user',
+              content = function()
+                return 'Please summarize this text'
+              end,
+              opts = {
+                index = 8,
+                is_default = false,
+                is_slash_cmd = false,
+                short_name = 'summarize',
+                description = 'Summarize the selected text',
+              },
+            },
+          },
+        },
+
+        -- Slash commands for quick actions
+        slash_commands = {
+          ['buffer'] = {
+            callback = 'strategies.chat.slash_commands.buffer',
+            description = 'Insert open buffers',
+            opts = {
+              contains_code = true,
+              provider = 'telescope', -- default|telescope|mini_pick
+            },
+          },
+          ['file'] = {
+            callback = 'strategies.chat.slash_commands.file',
+            description = 'Insert a file',
+            opts = {
+              contains_code = true,
+              max_lines = 1000,
+              provider = 'telescope', -- telescope|mini_pick
+            },
+          },
+          ['help'] = {
+            callback = 'strategies.chat.slash_commands.help',
+            description = 'Insert content from help tags',
+            opts = {
+              contains_code = false,
+              provider = 'telescope', -- telescope|mini_pick
+            },
+          },
+          ['symbols'] = {
+            callback = 'strategies.chat.slash_commands.symbols',
+            description = 'Insert symbols from the current buffer',
+            opts = {
+              contains_code = true,
+              provider = 'telescope', -- telescope|mini_pick
+            },
+          },
+        },
+
+        -- Inline prompts for quick code modifications
+        inline_prompts = {
+          -- Trigger with :CodeCompanion <prompt_name>
+          refactor = {
+            prompts = {
+              {
+                role = 'user',
+                content = 'Refactor this code to be more efficient and maintainable',
+              },
+            },
+          },
+          fix = {
+            prompts = {
+              {
+                role = 'user',
+                content = 'Fix any bugs in this code',
+              },
+            },
+          },
+          explain = {
+            prompts = {
+              {
+                role = 'user',
+                content = 'Add explanatory comments to this code',
+              },
+            },
+          },
+          tests = {
+            prompts = {
+              {
+                role = 'user',
+                content = 'Generate comprehensive unit tests for this code',
+              },
+            },
+          },
+        },
+
+        -- Options
+        opts = {
+          log_level = 'INFO', -- TRACE|DEBUG|INFO|ERROR
+          send_code = true,
+          use_default_actions = true,
+          use_default_prompt_library = true,
+          use_default_slash_commands = true,
+          silence_notifications = false, -- Silence notifications for actions like saving chat buffers
+        },
+      }
+
+      -- Set up keymaps for all interactions
+      -- Chat keymaps
+      vim.api.nvim_set_keymap('n', '<leader>cc', '<cmd>CodeCompanionChat Toggle<cr>', { noremap = true, silent = true, desc = '[C]ode[C]ompanion Chat' })
+      vim.api.nvim_set_keymap('v', '<leader>cc', '<cmd>CodeCompanionChat Toggle<cr>', { noremap = true, silent = true, desc = '[C]ode[C]ompanion Chat' })
+      vim.api.nvim_set_keymap('n', '<leader>ca', '<cmd>CodeCompanionActions<cr>', { noremap = true, silent = true, desc = '[C]ode Companion [A]ctions' })
+      vim.api.nvim_set_keymap('v', '<leader>ca', '<cmd>CodeCompanionActions<cr>', { noremap = true, silent = true, desc = '[C]ode Companion [A]ctions' })
+
+      -- Inline keymaps
+      vim.api.nvim_set_keymap('n', '<leader>ci', '<cmd>CodeCompanion<cr>', { noremap = true, silent = true, desc = '[C]ode Companion [I]nline' })
+      vim.api.nvim_set_keymap('v', '<leader>ci', '<cmd>CodeCompanion<cr>', { noremap = true, silent = true, desc = '[C]ode Companion [I]nline' })
+
+      -- Quick inline actions
+      vim.api.nvim_set_keymap('v', '<leader>cr', '<cmd>CodeCompanion refactor<cr>', { noremap = true, silent = true, desc = '[C]ode Companion [R]efactor' })
+      vim.api.nvim_set_keymap('v', '<leader>cf', '<cmd>CodeCompanion fix<cr>', { noremap = true, silent = true, desc = '[C]ode Companion [F]ix' })
+      vim.api.nvim_set_keymap('v', '<leader>ce', '<cmd>CodeCompanion explain<cr>', { noremap = true, silent = true, desc = '[C]ode Companion [E]xplain' })
+      vim.api.nvim_set_keymap('v', '<leader>ct', '<cmd>CodeCompanion tests<cr>', { noremap = true, silent = true, desc = '[C]ode Companion [T]ests' })
+
+      -- Add to chat
+      vim.api.nvim_set_keymap('n', '<leader>cp', '<cmd>CodeCompanionChat Add<cr>', { noremap = true, silent = true, desc = '[C]ode Companion Add to Chat' })
+      vim.api.nvim_set_keymap('v', '<leader>cp', '<cmd>CodeCompanionChat Add<cr>', { noremap = true, silent = true, desc = '[C]ode Companion Add to Chat' })
+
+      -- Cmd keymaps
+      vim.api.nvim_set_keymap('n', '<leader>cm', '<cmd>CodeCompanionCmd<cr>', { noremap = true, silent = true, desc = '[C]ode Companion Co[m]mand' })
+      vim.api.nvim_set_keymap('v', '<leader>cm', ":<C-u>'<,'>CodeCompanionCmd<cr>", { noremap = true, silent = true, desc = '[C]ode Companion Co[m]mand' })
+
+      -- Additional useful keymaps
+      vim.api.nvim_set_keymap('n', '<C-a>', '<cmd>CodeCompanionActions<cr>', { noremap = true, silent = true })
+      vim.api.nvim_set_keymap('v', '<C-a>', '<cmd>CodeCompanionActions<cr>', { noremap = true, silent = true })
+      vim.api.nvim_set_keymap('v', 'ga', '<cmd>CodeCompanionChat Add<cr>', { noremap = true, silent = true })
+      vim.api.nvim_set_keymap('n', '<LocalLeader>a', '<cmd>CodeCompanionChat Toggle<cr>', { noremap = true, silent = true })
+      vim.api.nvim_set_keymap('v', '<LocalLeader>a', '<cmd>CodeCompanionChat Toggle<cr>', { noremap = true, silent = true })
+    end,
+  },
   {
     'yetone/avante.nvim',
     -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
@@ -1047,31 +1411,6 @@ require('lazy').setup({
       },
     },
   },
-  -- { -- Highlight, edit, and navigate code
-  -- 'nvim-treesitter/nvim-treesitter',
-  -- build = ':TSUpdate',
-  --   main = 'nvim-treesitter.configs', -- Sets main module to use for opts
-  --   -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
-  --   opts = {
-  --     ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
-  --     -- Autoinstall languages that are not installed
-  --     auto_install = true,
-  --     highlight = {
-  --       enable = true,
-  --       -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-  --       --  If you are experiencing weird indenting issues, add the language to
-  --       --  the list of additional_vim_regex_highlighting and disabled languages for indent.
-  --       additional_vim_regex_highlighting = { 'ruby' },
-  --     },
-  --     indent = { enable = true, disable = { 'ruby' } },
-  --   },
-  --   -- There are additional nvim-treesitter modules that you can use to interact
-  --   -- with nvim-treesitter. You should go explore a few and see what interests you:
-  --   --
-  --   --    - Incremental selection: Included, see `:help nvim-treesitter-incremental-selection-mod`
-  --   --    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
-  --   --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
-  -- },
 
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
