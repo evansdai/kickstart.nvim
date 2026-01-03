@@ -974,26 +974,10 @@ require('lazy').setup({
           -- Chat interaction in a buffer
           chat = {
             adapter = 'openrouter',
-            roles = {
-              llm = '  CodeCompanion',
-              user = '  You',
-            },
-            keymaps = {
-              close = { modes = { n = 'q', i = '<C-c>' } },
-              stop = { modes = { n = '<C-c>' } },
-              submit = { modes = { n = '<CR>', i = '<C-CR>' } },
-              accept_diff = { modes = { n = 'ga' } },
-              reject_diff = { modes = { n = 'gr' } },
-              toggle_diff = { modes = { n = 'gd' } },
-            },
           },
           -- Inline interaction for code suggestions
           inline = {
             adapter = 'openrouter',
-            keymaps = {
-              accept_change = { modes = { n = 'ga' } },
-              reject_change = { modes = { n = 'gr' } },
-            },
           },
           -- Agent/command interaction
           agent = {
@@ -1007,43 +991,29 @@ require('lazy').setup({
 
         -- Adapters configuration
         adapters = {
-          openrouter = function()
-            return require('codecompanion.adapters').extend('openai', {
-              name = 'openrouter',
-              url = 'https://openrouter.ai/api/v1/chat/completions',
-              env = {
-                api_key = 'OPENROUTER_API_KEY',
-              },
-              headers = {
-                ['HTTP-Referer'] = 'https://neovim.io', -- Optional but recommended by OpenRouter
-                ['X-Title'] = 'Neovim CodeCompanion', -- Optional: helps OpenRouter track usage
-              },
-              schema = {
-                model = {
-                  default = 'anthropic/claude-3.5-sonnet', -- Default model
-                  choices = {
-                    'anthropic/claude-3.5-sonnet',
-                    'anthropic/claude-3-opus',
-                    'openai/gpt-4-turbo',
-                    'openai/gpt-4',
-                    'openai/gpt-3.5-turbo',
-                    'google/gemini-pro',
-                    'google/gemini-pro-1.5',
-                    'meta-llama/llama-3-70b-instruct',
-                    'meta-llama/codellama-70b-instruct',
-                    'deepseek/deepseek-coder',
-                    'deepseek/deepseek-chat',
+          http = {
+            openrouter = function()
+              return require('codecompanion.adapters').extend('openai_compatible', {
+                env = {
+                  url = 'https://openrouter.ai/api',
+                  api_key = 'OPENROUTER_API_KEY',
+                  chat_url = '/v1/chat/completions',
+                },
+                schema = {
+                  model = {
+                    default = 'openai/gpt-4o-mini',
+                    choices = {
+                      ['x-ai/grok-code-fast-1'] = {},
+                      ['qwen/qwen3-coder-30b-a3b-instruct'] = {},
+                      ['anthropic/claude-3.7-sonnet'] = {},
+                      ['anthropic/claude-3.5-sonnet'] = {},
+                      ['openai/gpt-4o-mini'] = {},
+                    },
                   },
                 },
-                temperature = {
-                  default = 0.7,
-                },
-                max_tokens = {
-                  default = 4096,
-                },
-              },
-            })
-          end,
+              })
+            end,
+          },
         },
 
         -- Display options
@@ -1311,6 +1281,22 @@ require('lazy').setup({
       vim.api.nvim_set_keymap('n', '<LocalLeader>a', '<cmd>CodeCompanionChat Toggle<cr>', { noremap = true, silent = true })
       vim.api.nvim_set_keymap('v', '<LocalLeader>a', '<cmd>CodeCompanionChat Toggle<cr>', { noremap = true, silent = true })
     end,
+  },
+  {
+    "saghen/blink.cmp",
+    lazy = false,
+    version = "*",
+    opts = {
+      keymap = {
+        preset = "enter",
+        ["<S-Tab>"] = { "select_prev", "fallback" },
+        ["<Tab>"] = { "select_next", "fallback" },
+      },
+      cmdline = { sources = { "cmdline" } },
+      sources = {
+        default = { "lsp", "path", "buffer", "codecompanion" },
+      },
+    },
   },
   {
     'yetone/avante.nvim',
